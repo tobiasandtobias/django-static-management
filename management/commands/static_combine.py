@@ -76,7 +76,7 @@ class Command(BaseCommand):
 
     def replace_css(self, filename):
         tmp = os.tmpfile()
-        rel_filename = os.path.join(settings.MEDIA_ROOT, filename)
+        rel_filename = os.path.join(settings.STATIC_MANAGEMENT_MEDIA_ROOT, filename)
         css = open(rel_filename, mode='r')
         for line in css:
             matches = []
@@ -85,13 +85,15 @@ class Command(BaseCommand):
                     grp = match.groupdict()
                     absolute = grp['filename'].startswith('/')
                     if absolute:
-                        asset_path = os.path.join(settings.MEDIA_ROOT, '.'+grp['filename'])
+                        asset_path = os.path.join(settings.STATIC_MANAGEMENT_MEDIA_ROOT, '.'+grp['filename'])
                     else:
                         asset_path = os.path.join(os.path.dirname(rel_filename), grp['filename'])
-                    asset = relpath(asset_path, settings.MEDIA_ROOT)
+                    print asset_path
+                    asset = relpath(asset_path, settings.STATIC_MANAGEMENT_MEDIA_ROOT)
                     asset_version = 'url(%s%s)' % (self.abs_versions[asset], grp.get('fragment') or '')
                     matches.append((grp['url'], asset_version))
                 except KeyError:
+                    print rel_filename
                     print "Failed to find %s in version map. Is it an absolute path?" % asset
                     raise SystemExit(1)
             for old, new in matches:
@@ -108,16 +110,16 @@ class Command(BaseCommand):
             exp = re.compile(settings.STATIC_MANAGEMENT_ASSET_PATTERN)
             for path, recurse in settings.STATIC_MANAGEMENT_ASSET_PATHS:
                 if recurse:
-                    for root, dirs, files in os.walk(os.path.join(settings.MEDIA_ROOT, path)):
+                    for root, dirs, files in os.walk(os.path.join(settings.STATIC_MANAGEMENT_MEDIA_ROOT, path)):
                         for filename in files:
                             if exp.match(filename):
-                                yield relpath(os.path.join(root, filename), settings.MEDIA_ROOT)
+                                yield relpath(os.path.join(root, filename), settings.STATIC_MANAGEMENT_MEDIA_ROOT)
                 else:
-                    for filename in os.listdir(os.path.join(settings.MEDIA_ROOT, path)):
-                        full_filename = os.path.join(settings.MEDIA_ROOT, os.path.join(path, filename))
+                    for filename in os.listdir(os.path.join(settings.STATIC_MANAGEMENT_MEDIA_ROOT, path)):
+                        full_filename = os.path.join(settings.STATIC_MANAGEMENT_MEDIA_ROOT, os.path.join(path, filename))
                         if not os.path.isdir(full_filename):
                             if exp.match(filename):
-                                yield relpath(full_filename, settings.MEDIA_ROOT)
+                                yield relpath(full_filename, settings.STATIC_MANAGEMENT_MEDIA_ROOT)
 
     def get_versions(self, css_only=False):
         hosts = settings.STATIC_MANAGEMENT_HOSTNAMES
@@ -129,7 +131,7 @@ class Command(BaseCommand):
         for main_file in files:
             if i > len(hosts) - 1:
                 i = 0
-            version = get_version(os.path.join(settings.MEDIA_ROOT, main_file), main_file, settings.STATIC_MANAGEMENT_VERSIONER)
+            version = get_version(os.path.join(settings.STATIC_MANAGEMENT_MEDIA_ROOT, main_file), main_file, settings.STATIC_MANAGEMENT_VERSIONER)
             self.versions[main_file] = version
             self.abs_versions[main_file] = hosts[i] + version
             i += 1
@@ -137,19 +139,19 @@ class Command(BaseCommand):
     def write_versions(self):
         for main_file in self.files_created:
             if self.options['write-version']:
-                shutil.copy2(os.path.join(settings.MEDIA_ROOT, main_file),
-                             os.path.join(settings.MEDIA_ROOT, self.versions[main_file]))
+                shutil.copy2(os.path.join(settings.STATIC_MANAGEMENT_MEDIA_ROOT, main_file),
+                             os.path.join(settings.STATIC_MANAGEMENT_MEDIA_ROOT, self.versions[main_file]))
         if self.options['output']:
             write_versions(self.abs_versions, settings.STATIC_MANAGEMENT_VERSION_WRITER)
 
 def combine_files(files, options):
     for main_file in files:
         # create file
-        main_file_path = os.path.join(settings.MEDIA_ROOT, main_file)
+        main_file_path = os.path.join(settings.STATIC_MANAGEMENT_MEDIA_ROOT, main_file)
         # go and get sub files
         to_combine = recurse_files(main_file, files[main_file], files)
-        to_combine_paths = [os.path.join(settings.MEDIA_ROOT, f_name) for f_name in to_combine if os.path.exists(os.path.join(settings.MEDIA_ROOT, f_name))]
-        static_combine(os.path.join(settings.MEDIA_ROOT, main_file), to_combine_paths, compress=options['compress'])
+        to_combine_paths = [os.path.join(settings.STATIC_MANAGEMENT_MEDIA_ROOT, f_name) for f_name in to_combine if os.path.exists(os.path.join(settings.STATIC_MANAGEMENT_MEDIA_ROOT, f_name))]
+        static_combine(os.path.join(settings.STATIC_MANAGEMENT_MEDIA_ROOT, main_file), to_combine_paths, compress=options['compress'])
 
 def recurse_files(name, files, top):
     """
